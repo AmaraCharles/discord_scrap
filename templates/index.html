@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Discord Link Hunter v3</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080a0f;--bg2:#0f1219;--bg3:#171c28;--bg4:#1e2435;
+  --border:rgba(255,255,255,0.055);--border2:rgba(255,255,255,0.11);--border3:rgba(255,255,255,0.18);
+  --accent:#5865F2;--ah:#4752c4;--aglow:rgba(88,101,242,0.3);
+  --green:#3ba55c;--gbg:rgba(59,165,92,0.1);
+  --yellow:#faa61a;--ybg:rgba(250,166,26,0.1);
+  --red:#ed4245;--rbg:rgba(237,66,69,0.1);
+  --cyan:#22d3ee;--cbg:rgba(34,211,238,0.1);
+  --text:#dde1ec;--muted:#6b7394;--subtle:#3d4260;
+  --mono:'Space Mono',monospace;--sans:'DM Sans',sans-serif;
+  --r:10px;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5;min-height:100vh}
+
+/* HEADER */
+header{background:var(--bg2);border-bottom:1px solid var(--border);padding:13px 24px;
+  display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:200;
+  backdrop-filter:blur(12px)}
+.logo{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),#818cf8);
+  border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.hinfo h1{font-size:15px;font-weight:600;letter-spacing:-0.2px}
+.hinfo .sub{font-size:10px;color:var(--muted);font-family:var(--mono)}
+.hright{margin-left:auto;display:flex;align-items:center;gap:10px}
+.live-pill{display:none;align-items:center;gap:5px;background:var(--gbg);
+  border:1px solid rgba(59,165,92,0.25);border-radius:20px;padding:3px 10px;
+  font-size:10px;font-weight:700;color:var(--green);letter-spacing:0.5px}
+.live-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.speed-pill{background:var(--cbg);border:1px solid rgba(34,211,238,0.2);color:var(--cyan);
+  border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;display:none;letter-spacing:0.5px}
+
+/* LAYOUT */
+.wrap{max-width:1280px;margin:0 auto;padding:20px 16px;display:grid;grid-template-columns:290px 1fr;gap:16px}
+@media(max-width:840px){.wrap{grid-template-columns:1fr}}
+
+/* PANELS */
+.sidebar{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.card-head{padding:10px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.card-head .ico{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.card-head h2{font-size:10.5px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);flex:1}
+.card-head .act{font-size:10px;color:var(--accent);cursor:pointer;font-family:var(--mono);flex-shrink:0}
+.card-head .act:hover{text-decoration:underline}
+.card-body{padding:12px 13px}
+
+/* SOURCE LIST */
+.sg-label{font-size:9.5px;font-weight:700;color:var(--subtle);text-transform:uppercase;
+  letter-spacing:.6px;margin:9px 0 5px;display:flex;align-items:center;gap:6px}
+.sg-label:first-child{margin-top:0}
+.sg-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.src-list{display:flex;flex-direction:column;gap:4px}
+.src-item{display:flex;align-items:center;gap:7px;padding:5px 8px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:7px;cursor:pointer;transition:all .12s}
+.src-item:hover{border-color:var(--border2)}
+.src-item.on{border-color:rgba(88,101,242,.28);background:rgba(88,101,242,.07)}
+.src-item input{width:13px;height:13px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+.src-ico{font-size:12px;flex-shrink:0}
+.src-name{font-size:11px;font-weight:500;flex:1}
+.src-tag{font-size:8.5px;font-family:var(--mono);padding:1px 5px;border-radius:3px;flex-shrink:0}
+.t-dir{background:rgba(88,101,242,.15);color:#a5b4fc}
+.t-search{background:rgba(250,166,26,.15);color:var(--yellow)}
+.t-social{background:rgba(59,165,92,.15);color:var(--green)}
+.t-forum{background:rgba(180,142,173,.15);color:#b48ead}
+.t-misc{background:rgba(34,211,238,.12);color:var(--cyan)}
+
+/* FORM */
+label.lbl{font-size:11px;color:var(--muted);display:block;margin-bottom:4px}
+select,input[type=text]{width:100%;background:var(--bg3);border:1px solid var(--border);
+  border-radius:7px;padding:7px 9px;color:var(--text);font-family:var(--mono);font-size:11px;
+  outline:none;transition:border .15s}
+select:focus,input[type=text]:focus{border-color:rgba(88,101,242,.5);background:var(--bg4)}
+select{cursor:pointer}
+.row{margin-bottom:9px}
+.tag-wrap{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.tag{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:2px 7px;
+  font-size:10px;font-family:var(--mono);color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:3px}
+.tag.on{background:rgba(88,101,242,.12);border-color:rgba(88,101,242,.35);color:#a5b4fc}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:9px 16px;border-radius:8px;font-family:var(--sans);font-size:13px;
+  font-weight:600;cursor:pointer;border:none;transition:all .15s;letter-spacing:-.1px}
+.btn-primary{background:var(--accent);color:#fff;width:100%;margin-top:3px}
+.btn-primary:hover{background:var(--ah);box-shadow:0 0 20px var(--aglow)}
+.btn-primary:active{transform:scale(.98)}
+.btn-primary:disabled{background:var(--subtle);cursor:not-allowed;box-shadow:none}
+.btn-stop{background:var(--rbg);border:1px solid rgba(237,66,69,.3);color:var(--red);
+  width:100%;margin-top:6px;display:none}
+.btn-stop:hover{background:rgba(237,66,69,.18)}
+.btn-sm{padding:4px 9px;font-size:11px;border-radius:6px}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--border3);color:var(--text)}
+
+/* MAIN */
+.main{display:flex;flex-direction:column;gap:14px}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+@media(max-width:680px){.stats{grid-template-columns:repeat(3,1fr)}}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;position:relative;overflow:hidden}
+.stat::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .3s}
+.stat.flash::before{opacity:1;background:rgba(88,101,242,.06)}
+.stat-lbl{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.stat-val{font-size:22px;font-weight:700;font-family:var(--mono);letter-spacing:-1.5px;transition:color .3s}
+.c-accent .stat-val{color:var(--accent)}
+.c-green .stat-val{color:var(--green)}
+.c-yellow .stat-val{color:var(--yellow)}
+.c-cyan .stat-val{color:var(--cyan)}
+
+/* LOG */
+.log-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.log-hd{padding:9px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.log-hd span{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+#log-box{height:140px;overflow-y:auto;padding:9px 13px;font-family:var(--mono);font-size:10px;
+  line-height:1.9;background:var(--bg)}
+.li{color:var(--text)}.lw{color:var(--yellow)}.le{color:var(--red)}
+.ts{color:var(--subtle);margin-right:7px}
+#log-box::-webkit-scrollbar{width:3px}
+#log-box::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* RESULTS */
+.res-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.res-hd{padding:11px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.res-hd-l{display:flex;align-items:center;gap:9px}
+.res-hd-l h3{font-size:13px;font-weight:600}
+.cbadge{background:rgba(88,101,242,.15);border:1px solid rgba(88,101,242,.25);color:#a5b4fc;
+  font-family:var(--mono);font-size:10px;padding:1px 7px;border-radius:4px;
+  transition:background .2s}
+.cbadge.flash-green{background:rgba(59,165,92,.2);border-color:rgba(59,165,92,.4);color:var(--green)}
+.res-hd-r{display:flex;gap:6px}
+.filter-row{padding:8px 13px;border-bottom:1px solid var(--border);display:flex;gap:7px}
+.filter-row input{font-size:11px;padding:5px 8px}
+#tbl-wrap{overflow-x:auto;max-height:450px;overflow-y:auto}
+#tbl-wrap::-webkit-scrollbar{width:3px;height:3px}
+#tbl-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+table{width:100%;border-collapse:collapse;font-size:11.5px}
+thead{position:sticky;top:0;z-index:5}
+thead th{background:var(--bg3);padding:7px 11px;text-align:left;font-size:10px;
+  font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;
+  border-bottom:1px solid var(--border)}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+tbody tr:last-child{border-bottom:none}
+tbody tr.new-row{animation:rowIn .3s ease forwards}
+@keyframes rowIn{from{background:rgba(88,101,242,.1)}to{background:transparent}}
+td{padding:7px 11px;vertical-align:middle}
+.td-code{font-family:var(--mono);color:#a5b4fc;font-size:10.5px}
+.td-url a{color:var(--accent);text-decoration:none;font-family:var(--mono);font-size:10.5px}
+.td-url a:hover{text-decoration:underline}
+.td-src{color:var(--muted);font-size:10.5px}
+.td-ctx{color:var(--subtle);font-size:10.5px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.td-t{color:var(--subtle);font-family:var(--mono);font-size:9.5px}
+.cp{background:var(--bg3);border:1px solid var(--border);color:var(--muted);border-radius:4px;
+  padding:2px 7px;font-size:9.5px;cursor:pointer;transition:all .12s;font-family:var(--sans)}
+.cp:hover{border-color:var(--border2);color:var(--text)}
+.cp.ok{background:var(--gbg);border-color:rgba(59,165,92,.3);color:var(--green)}
+.empty{text-align:center;padding:44px;color:var(--muted)}
+.empty .ei{font-size:32px;margin-bottom:10px}
+.empty p{font-size:12px}
+
+/* TOAST */
+#toast{position:fixed;bottom:20px;right:20px;background:var(--bg3);border:1px solid var(--border2);
+  border-radius:9px;padding:9px 14px;font-size:12px;z-index:9999;
+  transform:translateY(16px);opacity:0;transition:all .2s;pointer-events:none}
+#toast.show{transform:translateY(0);opacity:1}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🎯</div>
+  <div class="hinfo">
+    <h1>Discord Link Hunter <span style="font-size:9px;color:var(--accent);font-family:var(--mono);vertical-align:middle">v3</span></h1>
+    <div class="sub">parallel multi-platform scraper</div>
+  </div>
+  <div class="hright">
+    <div class="speed-pill" id="speed-pill">⚡ PARALLEL</div>
+    <div class="live-pill" id="live-pill"><div class="live-dot"></div>LIVE</div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="sidebar">
+
+    <!-- SOURCES -->
+    <div class="card">
+      <div class="card-head">
+        <div class="ico" style="background:rgba(88,101,242,.12)">⚙️</div>
+        <h2>Sources</h2>
+        <span class="act" onclick="selAll(true)">All</span>&nbsp;
+        <span class="act" onclick="selAll(false)" style="color:var(--muted)">None</span>
+      </div>
+      <div class="card-body">
+
+        <div class="sg-label">Discord Directories</div>
+        <div class="src-list" id="src-dir"></div>
+
+        <div class="sg-label">Search Engines</div>
+        <div class="src-list" id="src-search"></div>
+
+        <div class="sg-label">Social & Forums</div>
+        <div class="src-list" id="src-social"></div>
+
+        <div class="sg-label">Dev & Misc</div>
+        <div class="src-list" id="src-misc"></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="card">
+      <div class="card-head">
+        <div class="ico" style="background:rgba(250,166,26,.1)">🎛</div>
+        <h2>Settings</h2>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <label class="lbl">Depth</label>
+          <select id="depth">
+            <option value="quick">⚡ Quick (fastest)</option>
+            <option value="normal" selected>🔥 Normal (recommended)</option>
+            <option value="deep">🔬 Deep (thorough)</option>
+          </select>
+        </div>
+        <div class="row">
+          <label class="lbl">Extra Keywords <span style="color:var(--subtle)">(optional)</span></label>
+          <input type="text" id="kw-inp" placeholder="keyword → Enter">
+          <div class="tag-wrap" id="kw-tags"></div>
+        </div>
+        <div class="row">
+          <label class="lbl">Extra Subreddits <span style="color:var(--subtle)">(optional)</span></label>
+          <input type="text" id="sub-inp" placeholder="SubredditName → Enter">
+          <div class="tag-wrap" id="sub-tags"></div>
+        </div>
+        <button class="btn btn-primary" id="start-btn" onclick="startScrape()">🚀 Start Parallel Hunt</button>
+        <button class="btn btn-stop" id="stop-btn" onclick="stopScrape()">⏹ Stop</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- STATS -->
+    <div class="stats">
+      <div class="stat c-accent" id="sc-total"><div class="stat-lbl">Total Found</div><div class="stat-val" id="sv-total">0</div></div>
+      <div class="stat c-green"  id="sc-dir">  <div class="stat-lbl">Directories</div><div class="stat-val" id="sv-dir">0</div></div>
+      <div class="stat"          id="sc-reddit"><div class="stat-lbl">Reddit</div>    <div class="stat-val" id="sv-reddit">0</div></div>
+      <div class="stat c-yellow" id="sc-search"><div class="stat-lbl">Search</div>   <div class="stat-val" id="sv-search">0</div></div>
+      <div class="stat c-cyan"   id="sc-other"> <div class="stat-lbl">Other</div>    <div class="stat-val" id="sv-other">0</div></div>
+    </div>
+
+    <!-- LOG -->
+    <div class="log-card">
+      <div class="log-hd">
+        <span>Live Log</span>
+        <button class="btn btn-ghost btn-sm" onclick="clearLog()">Clear</button>
+      </div>
+      <div id="log-box"><div class="li"><span class="ts">--:--:--</span>Select sources and click Start…</div></div>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="res-card">
+      <div class="res-hd">
+        <div class="res-hd-l">
+          <h3>Discord Servers</h3>
+          <span class="cbadge" id="cnt-badge">0 links</span>
+        </div>
+        <div class="res-hd-r">
+          <button class="btn btn-ghost btn-sm" onclick="exp('csv')">CSV</button>
+          <button class="btn btn-ghost btn-sm" onclick="exp('json')">JSON</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearRes()">Clear</button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <input type="text" id="filter-inp" placeholder="🔍  Filter by code, source or keyword…" oninput="filterTable()">
+      </div>
+      <div id="tbl-wrap">
+        <div class="empty" id="empty"><div class="ei">🎯</div><p>Results appear here in real time…</p></div>
+        <table id="tbl" style="display:none">
+          <thead><tr><th>Invite Code</th><th>URL</th><th>Source</th><th>Context</th><th>Time</th><th></th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Source definitions ─────────────────────────────────────────────
+const SOURCES = [
+  {id:'disboard',      name:'Disboard.org',       ico:'📋', tag:'dir',    grp:'dir',    def:true},
+  {id:'discordme',     name:'Discord.me',          ico:'📋', tag:'dir',    grp:'dir',    def:true},
+  {id:'discords_com',  name:'Discords.com',        ico:'📋', tag:'dir',    grp:'dir',    def:true},
+  {id:'discord_boats', name:'Discord.boats',       ico:'🚢', tag:'dir',    grp:'dir',    def:true},
+  {id:'topgg',         name:'Top.gg',              ico:'⭐', tag:'dir',    grp:'dir',    def:true},
+  {id:'discordservers',name:'DiscordServers.com',  ico:'📋', tag:'dir',    grp:'dir',    def:true},
+  {id:'find_discord',  name:'Find-Discord.com',    ico:'🔎', tag:'dir',    grp:'dir',    def:true},
+  {id:'duckduckgo',    name:'DuckDuckGo',          ico:'🦆', tag:'search', grp:'search', def:true},
+  {id:'bing',          name:'Bing',                ico:'🔵', tag:'search', grp:'search', def:true},
+  {id:'reddit',        name:'Reddit',              ico:'🤖', tag:'social', grp:'social', def:true},
+  {id:'twitter',       name:'Twitter/X (Nitter)',  ico:'𝕏',  tag:'social', grp:'social', def:true},
+  {id:'fourchan',      name:'4chan /biz/',          ico:'🍀', tag:'forum',  grp:'social', def:true},
+  {id:'stocktwits',    name:'StockTwits',          ico:'📈', tag:'social', grp:'social', def:true},
+  {id:'youtube',       name:'YouTube',             ico:'▶️', tag:'social', grp:'social', def:false},
+  {id:'telegram',      name:'Telegram',            ico:'✈️', tag:'social', grp:'social', def:false},
+  {id:'hive',          name:'Hive.blog',           ico:'🐝', tag:'forum',  grp:'social', def:false},
+  {id:'medium',        name:'Medium',              ico:'📝', tag:'social', grp:'social', def:false},
+  {id:'github',        name:'GitHub',              ico:'🐙', tag:'misc',   grp:'misc',   def:false},
+  {id:'pastebin',      name:'Pastebin',            ico:'📄', tag:'misc',   grp:'misc',   def:false},
+  {id:'tradingview',   name:'TradingView',         ico:'📊', tag:'misc',   grp:'misc',   def:false},
+];
+
+const TAG_CLS = {dir:'t-dir',search:'t-search',social:'t-social',forum:'t-forum',misc:'t-misc'};
+const GRP_EL = {dir:'src-dir',search:'src-search',social:'src-social',misc:'src-misc'};
+
+SOURCES.forEach(s => {
+  const el = document.getElementById(GRP_EL[s.grp]);
+  const item = document.createElement('label');
+  item.className = 'src-item' + (s.def ? ' on' : '');
+  item.id = `ci-${s.id}`;
+  item.innerHTML = `
+    <input type="checkbox" id="src-${s.id}" ${s.def?'checked':''}>
+    <span class="src-ico">${s.ico}</span>
+    <span class="src-name">${s.name}</span>
+    <span class="src-tag ${TAG_CLS[s.tag]}">${s.tag}</span>`;
+  el.appendChild(item);
+  item.querySelector('input').addEventListener('change', e => {
+    item.classList.toggle('on', e.target.checked);
+  });
+});
+
+function selAll(v) {
+  SOURCES.forEach(s => {
+    const cb = document.getElementById(`src-${s.id}`);
+    const ci = document.getElementById(`ci-${s.id}`);
+    if (cb) { cb.checked = v; ci.classList.toggle('on', v); }
+  });
+}
+
+// ── Tag inputs ─────────────────────────────────────────────────────
+const kws = [], subs = [];
+function setupTag(inputId, tagsId, arr) {
+  const inp = document.getElementById(inputId);
+  const wrap = document.getElementById(tagsId);
+  inp.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const v = inp.value.trim();
+    if (v && !arr.includes(v)) {
+      arr.push(v);
+      renderTags(wrap, arr);
+    }
+    inp.value = '';
+  });
+  function renderTags(w, a) {
+    w.innerHTML = a.map((t,i) =>
+      `<span class="tag on" onclick="rmTag(${i},'${tagsId}',this)">${esc(t)} <span style="opacity:.5">×</span></span>`
+    ).join('');
+  }
+  window[`rmTag`] = (i, wid, el) => {
+    if (wid !== tagsId) return;
+    arr.splice(i, 1);
+    renderTags(wrap, arr);
+  };
+}
+setupTag('kw-inp', 'kw-tags', kws);
+setupTag('sub-inp', 'sub-tags', subs);
+
+// ── Scrape control ─────────────────────────────────────────────────
+let state = { polling: null, results: [], lastLog: 0, lastCount: 0 };
+
+function getSources() {
+  return SOURCES.map(s => s.id).filter(id => {
+    const el = document.getElementById(`src-${id}`);
+    return el && el.checked;
+  });
+}
+
+function startScrape() {
+  const sources = getSources();
+  if (!sources.length) { toast('Select at least one source!'); return; }
+  const cfg = { sources, keywords: kws, subreddits: subs,
+                depth: document.getElementById('depth').value };
+  fetch('/api/start', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(cfg) })
+    .then(r => r.json()).then(d => {
+      if (d.error) { toast(d.error, 'e'); return; }
+      // Hard-reset the results table so a new run never appends to stale rows
+      state.results = [];
+      renderedCount = 0;
+      document.getElementById('tbody').innerHTML = '';
+      document.getElementById('tbl').style.display = 'none';
+      document.getElementById('empty').style.display = 'block';
+      document.getElementById('cnt-badge').textContent = '0 links';
+      updateStats([]);
+      document.getElementById('stop-btn').style.display = 'flex';
+      document.getElementById('live-pill').style.display = 'flex';
+      document.getElementById('speed-pill').style.display = 'flex';
+      document.getElementById('start-btn').disabled = true;
+      clearLog();
+      state.lastLog = 0; state.lastCount = 0;
+      state.polling = setInterval(poll, 900);  // poll every 0.9s for snappy updates
+    });
+}
+
+function stopScrape() {
+  fetch('/api/stop', { method:'POST' });
+  clearInterval(state.polling); state.polling = null;
+  resetCtrl();
+}
+
+function resetCtrl() {
+  document.getElementById('start-btn').disabled = false;
+  document.getElementById('stop-btn').style.display = 'none';
+  document.getElementById('live-pill').style.display = 'none';
+  document.getElementById('speed-pill').style.display = 'none';
+}
+
+// ── Polling (fast, 0.9s) ──────────────────────────────────────────
+function poll() {
+  fetch('/api/status').then(r => r.json()).then(d => {
+    if (!d.running && state.polling) {
+      clearInterval(state.polling); state.polling = null;
+      resetCtrl();
+      toast(`✅ Done! ${d.count} unique servers found.`);
+    }
+    // Render only NEW log lines (efficient)
+    const newLogs = d.progress.slice(state.lastLog);
+    newLogs.forEach(l => appendLog(l.msg, l.level));
+    state.lastLog = d.progress.length;
+
+    if (d.count !== state.lastCount) {
+      state.lastCount = d.count;
+      fetchResults();
+    }
+  }).catch(() => {});
+}
+
+function fetchResults() {
+  fetch('/api/results').then(r => r.json()).then(data => {
+    state.results = data;
+    renderTable(data);
+    updateStats(data);
+  });
+}
+
+// ── Log ───────────────────────────────────────────────────────────
+function appendLog(msg, level='info') {
+  const box = document.getElementById('log-box');
+  const ts = new Date().toLocaleTimeString();
+  const cls = {info:'li',warning:'lw',error:'le'}[level] || 'li';
+  const div = document.createElement('div');
+  div.className = cls;
+  div.innerHTML = `<span class="ts">${ts}</span>${esc(msg)}`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+function clearLog() {
+  document.getElementById('log-box').innerHTML = '';
+  state.lastLog = 0;
+}
+
+// ── Table ─────────────────────────────────────────────────────────
+let renderedCount = 0;
+
+function renderTable(data) {
+  const filter = document.getElementById('filter-inp').value.toLowerCase();
+  const filtered = filter ? data.filter(r =>
+    (r.code+r.source+r.context).toLowerCase().includes(filter)) : data;
+
+  const empty = document.getElementById('empty');
+  const tbl   = document.getElementById('tbl');
+  const tbody = document.getElementById('tbody');
+
+  if (!filtered.length) {
+    empty.style.display = 'block'; tbl.style.display = 'none'; renderedCount = 0; return;
+  }
+  empty.style.display = 'none'; tbl.style.display = 'table';
+
+  // Prepend only truly new rows (no full re-render)
+  if (!filter && filtered.length > renderedCount) {
+    const newRows = filtered.slice(renderedCount);
+    const frag = document.createDocumentFragment();
+    newRows.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.className = 'new-row';
+      tr.innerHTML = `
+        <td class="td-code">${esc(r.code)}</td>
+        <td class="td-url"><a href="${esc(r.url)}" target="_blank">${esc(r.url)}</a></td>
+        <td class="td-src">${esc(r.source)}</td>
+        <td class="td-ctx" title="${esc(r.context)}">${esc(r.context)}</td>
+        <td class="td-t">${esc(r.found_at)}</td>
+        <td><button class="cp" onclick="cpLink('${esc(r.url)}',this)">Copy</button></td>`;
+      frag.appendChild(tr);
+    });
+    tbody.insertBefore(frag, tbody.firstChild);
+    renderedCount = filtered.length;
+  } else if (filter) {
+    // Full re-render for filtered view
+    tbody.innerHTML = filtered.map(r => `
+      <tr>
+        <td class="td-code">${esc(r.code)}</td>
+        <td class="td-url"><a href="${esc(r.url)}" target="_blank">${esc(r.url)}</a></td>
+        <td class="td-src">${esc(r.source)}</td>
+        <td class="td-ctx" title="${esc(r.context)}">${esc(r.context)}</td>
+        <td class="td-t">${esc(r.found_at)}</td>
+        <td><button class="cp" onclick="cpLink('${esc(r.url)}',this)">Copy</button></td>
+      </tr>`).join('');
+  }
+
+  // Badge flash
+  const badge = document.getElementById('cnt-badge');
+  badge.textContent = `${filtered.length} link${filtered.length !== 1 ? 's' : ''}`;
+  badge.classList.add('flash-green');
+  setTimeout(() => badge.classList.remove('flash-green'), 600);
+}
+
+function filterTable() { renderedCount = 0; renderTable(state.results); }
+
+function updateStats(data) {
+  const dirSrcs = ['disboard','discord.me','discords.com','discord.boats','top.gg','discordservers','find-discord'];
+  const dir    = data.filter(r => dirSrcs.some(s => r.source.toLowerCase().includes(s))).length;
+  const reddit = data.filter(r => r.source.toLowerCase().includes('reddit')).length;
+  const search = data.filter(r => r.source.toLowerCase().includes('bing') || r.source.toLowerCase().includes('ddg')).length;
+  const other  = data.length - dir - reddit - search;
+
+  setStatVal('sv-total',  data.length);
+  setStatVal('sv-dir',    dir);
+  setStatVal('sv-reddit', reddit);
+  setStatVal('sv-search', search);
+  setStatVal('sv-other',  Math.max(0, other));
+}
+
+function setStatVal(id, val) {
+  const el = document.getElementById(id);
+  if (el.textContent !== String(val)) {
+    el.textContent = val;
+    const card = el.closest('.stat');
+    card.classList.add('flash');
+    setTimeout(() => card.classList.remove('flash'), 400);
+  }
+}
+
+// ── Utils ─────────────────────────────────────────────────────────
+function cpLink(url, btn) {
+  navigator.clipboard.writeText(url).then(() => {
+    btn.textContent = '✓ Copied'; btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('ok'); }, 1800);
+  });
+}
+
+function exp(fmt) { window.location.href = `/api/export?fmt=${fmt}`; }
+
+function clearRes() {
+  fetch('/api/clear', { method:'POST' }).then(() => {
+    state.results = [];
+    renderedCount = 0;
+    document.getElementById('tbody').innerHTML = '';   // hard DOM wipe
+    document.getElementById('tbl').style.display = 'none';
+    document.getElementById('empty').style.display = 'block';
+    document.getElementById('cnt-badge').textContent = '0 links';
+    updateStats([]);
+    clearLog();
+    toast('Cleared — history wiped. Next run starts fresh.');
+  });
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let _tt;
+function toast(msg, type='i') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'show';
+  clearTimeout(_tt); _tt = setTimeout(() => el.className = '', 3000);
+}
+</script>
+</body>
+</html>

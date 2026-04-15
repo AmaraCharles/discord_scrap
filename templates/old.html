@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Discord Link Hunter v2</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0d12;--bg2:#12151e;--bg3:#1a1e2a;--bg4:#20253a;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.12);--border3:rgba(255,255,255,0.2);
+  --accent:#5865F2;--accent-h:#4752c4;--accent-glow:rgba(88,101,242,0.25);
+  --green:#3ba55c;--green-bg:rgba(59,165,92,0.12);
+  --yellow:#faa61a;--yellow-bg:rgba(250,166,26,0.12);
+  --red:#ed4245;--red-bg:rgba(237,66,69,0.12);
+  --purple:#b48ead;--purple-bg:rgba(180,142,173,0.12);
+  --cyan:#5bc4c0;--cyan-bg:rgba(91,196,192,0.12);
+  --text:#e3e5eb;--muted:#7b8199;--subtle:#4a4f6a;
+  --mono:'Space Mono',monospace;--sans:'DM Sans',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5;min-height:100vh}
+header{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:200}
+.logo-wrap{width:34px;height:34px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+header h1{font-size:16px;font-weight:600;letter-spacing:-0.2px}
+header .sub{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:1px}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.live-badge{display:flex;align-items:center;gap:6px;background:var(--green-bg);border:1px solid rgba(59,165,92,0.25);border-radius:20px;padding:4px 11px;font-size:11px;font-weight:600;color:var(--green);display:none}
+.live-badge .dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.85)}}
+.container{max-width:1260px;margin:0 auto;padding:24px 20px;display:grid;grid-template-columns:320px 1fr;gap:20px}
+@media(max-width:860px){.container{grid-template-columns:1fr}}
+.sidebar{display:flex;flex-direction:column;gap:14px}
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.panel-head{padding:11px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}
+.panel-head .ico{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.panel-head h2{font-size:11px;font-weight:600;letter-spacing:0.4px;text-transform:uppercase;color:var(--muted)}
+.panel-head .sel-all{margin-left:auto;font-size:10px;color:var(--accent);cursor:pointer;font-family:var(--mono)}
+.panel-head .sel-all:hover{text-decoration:underline}
+.panel-body{padding:12px 14px}
+.source-group-label{font-size:10px;font-weight:600;color:var(--subtle);text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.source-group-label:first-child{margin-top:0}
+label{font-size:12px;color:var(--muted);display:block;margin-bottom:5px}
+input[type=text],textarea,select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:11.5px;outline:none;transition:border 0.15s}
+input[type=text]:focus,textarea:focus,select:focus{border-color:rgba(88,101,242,0.5);background:var(--bg4)}
+textarea{resize:vertical;min-height:72px;line-height:1.7}
+select{cursor:pointer}
+.form-row{margin-bottom:10px}
+.check-group{display:flex;flex-direction:column;gap:5px}
+.check-item{display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;transition:all 0.12s}
+.check-item:hover{border-color:var(--border2)}
+.check-item.selected{border-color:rgba(88,101,242,0.3);background:rgba(88,101,242,0.06)}
+.check-item input{width:14px;height:14px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+.ci-icon{font-size:13px;flex-shrink:0}
+.ci-label{font-size:11.5px;font-weight:500;flex:1}
+.ci-badge{font-size:9px;font-family:var(--mono);padding:1px 5px;border-radius:4px;flex-shrink:0}
+.badge-dir{background:rgba(88,101,242,0.15);color:#a5b4fc}
+.badge-search{background:rgba(250,166,26,0.15);color:var(--yellow)}
+.badge-social{background:rgba(59,165,92,0.15);color:var(--green)}
+.badge-forum{background:rgba(180,142,173,0.15);color:var(--purple)}
+.badge-misc{background:rgba(91,196,192,0.15);color:var(--cyan)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 18px;border-radius:9px;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;letter-spacing:-0.1px}
+.btn-primary{background:var(--accent);color:#fff;width:100%;margin-top:4px}
+.btn-primary:hover{background:var(--accent-h)}
+.btn-primary:active{transform:scale(0.98)}
+.btn-primary:disabled{background:var(--subtle);cursor:not-allowed;transform:none}
+.btn-stop{background:var(--red-bg);border:1px solid rgba(237,66,69,0.3);color:var(--red);width:100%;margin-top:6px;display:none}
+.btn-stop:hover{background:rgba(237,66,69,0.2)}
+.btn-sm{padding:5px 10px;font-size:11px;border-radius:6px}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--border3);color:var(--text)}
+.main{display:flex;flex-direction:column;gap:16px}
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+@media(max-width:700px){.stats-row{grid-template-columns:repeat(3,1fr)}}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.stat-card .stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px}
+.stat-card .stat-val{font-size:20px;font-weight:600;font-family:var(--mono);letter-spacing:-1px}
+.stat-card.accent .stat-val{color:var(--accent)}
+.stat-card.green .stat-val{color:var(--green)}
+.stat-card.yellow .stat-val{color:var(--yellow)}
+.stat-card.purple .stat-val{color:var(--purple)}
+.log-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.log-head{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.log-head span{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.3px}
+#log-box{height:150px;overflow-y:auto;padding:10px 14px;font-family:var(--mono);font-size:10.5px;line-height:1.8;background:var(--bg)}
+.log-info{color:var(--text)}.log-warning{color:var(--yellow)}.log-error{color:var(--red)}
+.log-ts{color:var(--subtle);margin-right:8px}
+#log-box::-webkit-scrollbar{width:4px}
+#log-box::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.results-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.results-head{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.results-head-left{display:flex;align-items:center;gap:10px}
+.results-head-left h3{font-size:13px;font-weight:600}
+.count-badge{background:rgba(88,101,242,0.15);border:1px solid rgba(88,101,242,0.25);color:#a5b4fc;font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:5px}
+.results-head-right{display:flex;gap:8px}
+.filter-row{padding:9px 14px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center}
+.filter-row input{font-size:11.5px;padding:6px 9px}
+#results-table-wrap{overflow-x:auto;max-height:460px;overflow-y:auto}
+#results-table-wrap::-webkit-scrollbar{width:4px;height:4px}
+#results-table-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead{position:sticky;top:0;z-index:10}
+thead th{background:var(--bg3);padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;border-bottom:1px solid var(--border)}
+tbody tr{border-bottom:1px solid var(--border);transition:background 0.1s}
+tbody tr:hover{background:rgba(255,255,255,0.02)}
+tbody tr:last-child{border-bottom:none}
+td{padding:8px 12px;vertical-align:middle}
+.td-code{font-family:var(--mono);color:#a5b4fc;font-size:11px}
+.td-url a{color:var(--accent);text-decoration:none;font-family:var(--mono);font-size:11px}
+.td-url a:hover{text-decoration:underline}
+.td-source{color:var(--muted);font-size:11px}
+.td-ctx{color:var(--subtle);font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.td-time{color:var(--subtle);font-family:var(--mono);font-size:10px}
+.copy-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted);border-radius:5px;padding:3px 7px;font-size:10px;cursor:pointer;transition:all 0.12s;font-family:var(--sans)}
+.copy-btn:hover{border-color:var(--border2);color:var(--text)}
+.copy-btn.copied{background:var(--green-bg);border-color:rgba(59,165,92,0.3);color:var(--green)}
+.empty-state{text-align:center;padding:44px 20px;color:var(--muted)}
+.empty-state .es-icon{font-size:34px;margin-bottom:10px}
+.empty-state p{font-size:13px}
+.tag-wrap{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.tag{background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:11px;font-family:var(--mono);color:var(--muted);cursor:pointer;transition:all 0.12s;display:flex;align-items:center;gap:4px}
+.tag:hover{border-color:var(--border2);color:var(--text)}
+.tag.selected{background:rgba(88,101,242,0.12);border-color:rgba(88,101,242,0.35);color:#a5b4fc}
+.tag .tag-x{color:var(--subtle);font-size:10px}
+#toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:10px 16px;font-size:13px;z-index:9999;transform:translateY(20px);opacity:0;transition:all 0.2s;pointer-events:none}
+#toast.show{transform:translateY(0);opacity:1}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-wrap">🎯</div>
+  <div>
+    <h1>Discord Link Hunter <span style="font-size:11px;color:var(--accent);font-family:var(--mono)">v2</span></h1>
+    <div class="sub">multi-platform trading server scraper</div>
+  </div>
+  <div class="header-right">
+    <div class="live-badge" id="live-badge"><div class="dot"></div> LIVE</div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <!-- SOURCES -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="ico" style="background:rgba(88,101,242,0.15)">⚙️</div>
+        <h2>Sources</h2>
+        <span class="sel-all" onclick="toggleAll(true)">All</span>&nbsp;
+        <span class="sel-all" onclick="toggleAll(false)" style="color:var(--muted)">None</span>
+      </div>
+      <div class="panel-body">
+
+        <div class="source-group-label">📋 Discord Directories</div>
+        <div class="check-group">
+          <label class="check-item" id="ci-disboard">
+            <input type="checkbox" id="src-disboard" checked>
+            <span class="ci-icon">📋</span>
+            <span class="ci-label">Disboard.org</span>
+            <span class="ci-badge badge-dir">dir</span>
+          </label>
+          <label class="check-item" id="ci-discordme">
+            <input type="checkbox" id="src-discordme" checked>
+            <span class="ci-icon">📋</span>
+            <span class="ci-label">Discord.me</span>
+            <span class="ci-badge badge-dir">dir</span>
+          </label>
+          <label class="check-item" id="ci-discords_com">
+            <input type="checkbox" id="src-discords_com" checked>
+            <span class="ci-icon">📋</span>
+            <span class="ci-label">Discords.com</span>
+            <span class="ci-badge badge-dir">dir</span>
+          </label>
+          <label class="check-item" id="ci-discord_boats">
+            <input type="checkbox" id="src-discord_boats" checked>
+            <span class="ci-icon">🚢</span>
+            <span class="ci-label">Discord.boats</span>
+            <span class="ci-badge badge-dir">dir</span>
+          </label>
+          <label class="check-item" id="ci-topgg">
+            <input type="checkbox" id="src-topgg" checked>
+            <span class="ci-icon">⭐</span>
+            <span class="ci-label">Top.gg</span>
+            <span class="ci-badge badge-dir">dir</span>
+          </label>
+          <label class="check-item" id="ci-discordservers">
+            <input type="checkbox" id="src-discordservers" checked>
+            <span class="ci-icon">📋</span>
+            <span class="ci-label">DiscordServers.com</span>
+            <span class="ci-badge badge-dir">dir</span>
+          </label>
+          <label class="check-item" id="ci-find_discord">
+            <input type="checkbox" id="src-find_discord" checked>
+            <span class="ci-icon">🔎</span>
+            <span class="ci-label">Find-Discord.com</span>
+            <span class="ci-badge badge-dir">dir</span>
+          </label>
+          <label class="check-item" id="ci-discord_center">
+            <input type="checkbox" id="src-discord_center">
+            <span class="ci-icon">🇪🇺</span>
+            <span class="ci-label">Discord.center</span>
+            <span class="ci-badge badge-dir">dir</span>
+          </label>
+        </div>
+
+        <div class="source-group-label">🔍 Search Engines</div>
+        <div class="check-group">
+          <label class="check-item" id="ci-duckduckgo">
+            <input type="checkbox" id="src-duckduckgo" checked>
+            <span class="ci-icon">🦆</span>
+            <span class="ci-label">DuckDuckGo</span>
+            <span class="ci-badge badge-search">search</span>
+          </label>
+          <label class="check-item" id="ci-bing">
+            <input type="checkbox" id="src-bing" checked>
+            <span class="ci-icon">🔵</span>
+            <span class="ci-label">Bing</span>
+            <span class="ci-badge badge-search">search</span>
+          </label>
+        </div>
+
+        <div class="source-group-label">💬 Social & Forums</div>
+        <div class="check-group">
+          <label class="check-item" id="ci-reddit">
+            <input type="checkbox" id="src-reddit" checked>
+            <span class="ci-icon">🤖</span>
+            <span class="ci-label">Reddit</span>
+            <span class="ci-badge badge-social">social</span>
+          </label>
+          <label class="check-item" id="ci-twitter">
+            <input type="checkbox" id="src-twitter" checked>
+            <span class="ci-icon">𝕏</span>
+            <span class="ci-label">Twitter/X (Nitter)</span>
+            <span class="ci-badge badge-social">social</span>
+          </label>
+          <label class="check-item" id="ci-fourchan">
+            <input type="checkbox" id="src-fourchan" checked>
+            <span class="ci-icon">🍀</span>
+            <span class="ci-label">4chan /biz/</span>
+            <span class="ci-badge badge-forum">forum</span>
+          </label>
+          <label class="check-item" id="ci-stocktwits">
+            <input type="checkbox" id="src-stocktwits" checked>
+            <span class="ci-icon">📈</span>
+            <span class="ci-label">StockTwits</span>
+            <span class="ci-badge badge-social">social</span>
+          </label>
+          <label class="check-item" id="ci-telegram">
+            <input type="checkbox" id="src-telegram">
+            <span class="ci-icon">✈️</span>
+            <span class="ci-label">Telegram (preview)</span>
+            <span class="ci-badge badge-social">social</span>
+          </label>
+          <label class="check-item" id="ci-youtube">
+            <input type="checkbox" id="src-youtube">
+            <span class="ci-icon">▶️</span>
+            <span class="ci-label">YouTube</span>
+            <span class="ci-badge badge-social">social</span>
+          </label>
+          <label class="check-item" id="ci-medium">
+            <input type="checkbox" id="src-medium">
+            <span class="ci-icon">📝</span>
+            <span class="ci-label">Medium</span>
+            <span class="ci-badge badge-social">social</span>
+          </label>
+          <label class="check-item" id="ci-hive">
+            <input type="checkbox" id="src-hive">
+            <span class="ci-icon">🐝</span>
+            <span class="ci-label">Hive.blog</span>
+            <span class="ci-badge badge-forum">forum</span>
+          </label>
+        </div>
+
+        <div class="source-group-label">🛠 Dev & Misc</div>
+        <div class="check-group">
+          <label class="check-item" id="ci-github">
+            <input type="checkbox" id="src-github">
+            <span class="ci-icon">🐙</span>
+            <span class="ci-label">GitHub</span>
+            <span class="ci-badge badge-misc">dev</span>
+          </label>
+          <label class="check-item" id="ci-pastebin">
+            <input type="checkbox" id="src-pastebin">
+            <span class="ci-icon">📄</span>
+            <span class="ci-label">Pastebin</span>
+            <span class="ci-badge badge-misc">misc</span>
+          </label>
+          <label class="check-item" id="ci-tradingview">
+            <input type="checkbox" id="src-tradingview">
+            <span class="ci-icon">📊</span>
+            <span class="ci-label">TradingView</span>
+            <span class="ci-badge badge-misc">finance</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="ico" style="background:rgba(250,166,26,0.12)">🎛</div>
+        <h2>Settings</h2>
+      </div>
+      <div class="panel-body">
+        <div class="form-row">
+          <label>Depth</label>
+          <select id="depth">
+            <option value="quick">Quick (fast scan)</option>
+            <option value="normal" selected>Normal (recommended)</option>
+            <option value="deep">Deep (thorough, slow)</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Custom Keywords <span style="color:var(--subtle)">(optional)</span></label>
+          <input type="text" id="kw-input" placeholder="Add keyword → Enter">
+          <div class="tag-wrap" id="kw-tags"></div>
+        </div>
+        <div class="form-row">
+          <label>Extra Subreddits <span style="color:var(--subtle)">(optional)</span></label>
+          <input type="text" id="sub-input" placeholder="SubredditName → Enter">
+          <div class="tag-wrap" id="sub-tags"></div>
+        </div>
+        <button class="btn btn-primary" id="start-btn" onclick="startScrape()">🚀 Start Hunt</button>
+        <button class="btn btn-stop" id="stop-btn" onclick="stopScrape()">⏹ Stop</button>
+      </div>
+    </div>
+
+  </div><!-- /sidebar -->
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- STATS -->
+    <div class="stats-row">
+      <div class="stat-card accent">
+        <div class="stat-label">Total Found</div>
+        <div class="stat-val" id="stat-total">0</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">From Directories</div>
+        <div class="stat-val" id="stat-dir">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">From Reddit</div>
+        <div class="stat-val" id="stat-reddit">0</div>
+      </div>
+      <div class="stat-card yellow">
+        <div class="stat-label">From Search</div>
+        <div class="stat-val" id="stat-search">0</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-label">Other Sources</div>
+        <div class="stat-val" id="stat-other">0</div>
+      </div>
+    </div>
+
+    <!-- LOG -->
+    <div class="log-wrap">
+      <div class="log-head">
+        <span>Live Log</span>
+        <button class="btn btn-ghost btn-sm" onclick="clearLog()">Clear</button>
+      </div>
+      <div id="log-box"><div class="log-info"><span class="log-ts">--:--:--</span>Select sources and click Start Hunt…</div></div>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="results-wrap">
+      <div class="results-head">
+        <div class="results-head-left">
+          <h3>Discord Servers</h3>
+          <span class="count-badge" id="count-badge">0 links</span>
+        </div>
+        <div class="results-head-right">
+          <button class="btn btn-ghost btn-sm" onclick="exportResults('csv')">CSV</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportResults('json')">JSON</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearResults()">Clear</button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <input type="text" id="filter-input" placeholder="🔍  Filter by code, source, or keyword…" oninput="filterTable()">
+      </div>
+      <div id="results-table-wrap">
+        <div class="empty-state" id="empty-state">
+          <div class="es-icon">🎯</div>
+          <p>No results yet — start a hunt above</p>
+        </div>
+        <table id="results-table" style="display:none">
+          <thead>
+            <tr>
+              <th>Invite Code</th>
+              <th>URL</th>
+              <th>Source</th>
+              <th>Context</th>
+              <th>Time</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="results-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div>
+
+<div id="toast"></div>
+
+<script>
+const state = { keywords: [], subreddits: [], polling: null, results: [] };
+
+// Source checkbox highlighting
+document.querySelectorAll('.check-item input[type=checkbox]').forEach(cb => {
+  cb.addEventListener('change', () => {
+    cb.closest('.check-item').classList.toggle('selected', cb.checked);
+  });
+  // Init
+  if (cb.checked) cb.closest('.check-item').classList.add('selected');
+});
+
+function toggleAll(val) {
+  document.querySelectorAll('.check-item input[type=checkbox]').forEach(cb => {
+    cb.checked = val;
+    cb.closest('.check-item').classList.toggle('selected', val);
+  });
+}
+
+// Tag input helper
+function setupTagInput(inputId, wrapId, arr) {
+  const inp = document.getElementById(inputId);
+  const wrap = document.getElementById(wrapId);
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const v = inp.value.trim();
+      if (v && !arr.includes(v)) {
+        arr.push(v);
+        renderTags(wrap, arr);
+      }
+      inp.value = '';
+    }
+  });
+  function renderTags(w, a) {
+    w.innerHTML = a.map((t, i) => `
+      <span class="tag selected" onclick="removeTag(${i},'${wrapId}')">
+        ${escHtml(t)} <span class="tag-x">×</span>
+      </span>`).join('');
+  }
+  window[`removeTag`] = (i, wid) => {
+    if (wid === wrapId) {
+      arr.splice(i, 1);
+      renderTags(wrap, arr);
+    }
+  };
+}
+setupTagInput('kw-input', 'kw-tags', state.keywords);
+setupTagInput('sub-input', 'sub-tags', state.subreddits);
+
+// ── Scrape control ─────────────────────────────────────────────────
+function getSources() {
+  return [
+    'disboard','discordme','discords_com','discord_boats','topgg',
+    'discordservers','find_discord','discord_center',
+    'duckduckgo','bing',
+    'reddit','twitter','fourchan','stocktwits','telegram','youtube','medium','hive',
+    'github','pastebin','tradingview'
+  ].filter(id => {
+    const el = document.getElementById(`src-${id}`);
+    return el && el.checked;
+  });
+}
+
+function startScrape() {
+  const sources = getSources();
+  if (!sources.length) { toast('Select at least one source!'); return; }
+
+  const config = {
+    sources,
+    keywords: state.keywords,
+    subreddits: state.subreddits,
+    depth: document.getElementById('depth').value,
+  };
+
+  fetch('/api/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config)
+  }).then(r => r.json()).then(d => {
+    if (d.error) { toast(d.error, 'error'); return; }
+    document.getElementById('start-btn').disabled = true;
+    document.getElementById('stop-btn').style.display = 'flex';
+    document.getElementById('live-badge').style.display = 'flex';
+    clearLog();
+    startPolling();
+  });
+}
+
+function stopScrape() {
+  fetch('/api/stop', { method: 'POST' });
+  stopPolling();
+  resetControls();
+}
+
+function startPolling() { state.polling = setInterval(pollStatus, 1500); }
+function stopPolling() { clearInterval(state.polling); state.polling = null; }
+function resetControls() {
+  document.getElementById('start-btn').disabled = false;
+  document.getElementById('stop-btn').style.display = 'none';
+  document.getElementById('live-badge').style.display = 'none';
+}
+
+let lastLogCount = 0, lastResultCount = 0;
+
+function pollStatus() {
+  fetch('/api/status').then(r => r.json()).then(d => {
+    if (!d.running && state.polling) {
+      stopPolling(); resetControls();
+      toast(`✅ Done! Found ${d.count} unique servers.`);
+    }
+    d.progress.slice(lastLogCount).forEach(l => appendLog(l.msg, l.level));
+    lastLogCount = d.progress.length;
+    if (d.count !== lastResultCount) {
+      lastResultCount = d.count;
+      fetchResults();
+    }
+  });
+}
+
+function fetchResults() {
+  fetch('/api/results').then(r => r.json()).then(data => {
+    state.results = data;
+    renderResults(data);
+    updateStats(data);
+  });
+}
+
+function appendLog(msg, level='info') {
+  const box = document.getElementById('log-box');
+  const ts = new Date().toLocaleTimeString();
+  const line = document.createElement('div');
+  line.className = `log-${level}`;
+  line.innerHTML = `<span class="log-ts">${ts}</span>${escHtml(msg)}`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('log-box').innerHTML = '';
+  lastLogCount = 0;
+}
+
+function renderResults(data) {
+  const filter = document.getElementById('filter-input').value.toLowerCase();
+  const filtered = filter
+    ? data.filter(r => r.code.toLowerCase().includes(filter) ||
+        r.source.toLowerCase().includes(filter) ||
+        r.context.toLowerCase().includes(filter))
+    : data;
+
+  const empty = document.getElementById('empty-state');
+  const table = document.getElementById('results-table');
+  const tbody = document.getElementById('results-body');
+
+  if (!filtered.length) {
+    empty.style.display = 'block'; table.style.display = 'none'; return;
+  }
+  empty.style.display = 'none'; table.style.display = 'table';
+
+  tbody.innerHTML = filtered.map(r => `
+    <tr>
+      <td class="td-code">${escHtml(r.code)}</td>
+      <td class="td-url"><a href="${escHtml(r.url)}" target="_blank">${escHtml(r.url)}</a></td>
+      <td class="td-source">${escHtml(r.source)}</td>
+      <td class="td-ctx" title="${escHtml(r.context)}">${escHtml(r.context)}</td>
+      <td class="td-time">${escHtml(r.found_at)}</td>
+      <td><button class="copy-btn" onclick="copyLink('${escHtml(r.url)}',this)">Copy</button></td>
+    </tr>`).join('');
+
+  document.getElementById('count-badge').textContent = `${filtered.length} link${filtered.length !== 1 ? 's' : ''}`;
+}
+
+function filterTable() { renderResults(state.results); }
+
+function updateStats(data) {
+  document.getElementById('stat-total').textContent = data.length;
+  const dirSrcs = ['disboard','discord.me','discords.com','discord.boats','top.gg','discordservers','find-discord','discord.center'];
+  const dir = data.filter(r => dirSrcs.some(s => r.source.toLowerCase().includes(s))).length;
+  const reddit = data.filter(r => r.source.toLowerCase().includes('reddit')).length;
+  const search = data.filter(r => r.source.toLowerCase().includes('bing') || r.source.toLowerCase().includes('duckduckgo')).length;
+  document.getElementById('stat-dir').textContent = dir;
+  document.getElementById('stat-reddit').textContent = reddit;
+  document.getElementById('stat-search').textContent = search;
+  document.getElementById('stat-other').textContent = data.length - dir - reddit - search;
+}
+
+function copyLink(url, btn) {
+  navigator.clipboard.writeText(url).then(() => {
+    btn.textContent = 'Copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+  });
+}
+
+function exportResults(fmt) { window.location.href = `/api/export?fmt=${fmt}`; }
+
+function clearResults() {
+  fetch('/api/clear', { method: 'POST' }).then(() => {
+    state.results = []; renderResults([]); updateStats([]); lastResultCount = 0;
+  });
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let toastTimer;
+function toast(msg, type='info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'show';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = '', 3000);
+}
+</script>
+</body>
+</html>
