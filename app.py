@@ -1,10 +1,59 @@
 import os, re, json, time, random, logging, datetime, threading, urllib.request, urllib.parse, urllib.error
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from flask import Flask, request, jsonify, Response, render_template
+from flask import Flask, request, jsonify, Response, render_template, session
+from functools import wraps
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", os.urandom(32))
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# ── Password Gateway ──────────────────────────────────────────────
+MAX_SCANS = 2
+
+# {password: {user_id, scans_used}}
+GATEWAY_USERS = {
+    "AAO7MdSIiZrw": {"user_id": "user01", "scans_used": 0},
+    "m5sUJ2Qm5XXo": {"user_id": "user02", "scans_used": 0},
+    "1OAis2FqAQJw": {"user_id": "user03", "scans_used": 0},
+    "PoaI9WVyNfHK": {"user_id": "user04", "scans_used": 0},
+    "bRBhE7LX3xNv": {"user_id": "user05", "scans_used": 0},
+    "1cVX3Nx681dz": {"user_id": "user06", "scans_used": 0},
+    "CKGIkNpZ6Cdo": {"user_id": "user07", "scans_used": 0},
+    "TmlAcOXTdOvI": {"user_id": "user08", "scans_used": 0},
+    "3FPICQN4SYCf": {"user_id": "user09", "scans_used": 0},
+    "jPEAjUrk8SaS": {"user_id": "user10", "scans_used": 0},
+    "6IO8GgaXGhpu": {"user_id": "user11", "scans_used": 0},
+    "O0sFGklLtN3y": {"user_id": "user12", "scans_used": 0},
+    "AjNgxKS1DU5v": {"user_id": "user13", "scans_used": 0},
+    "kP2Wd2C6IbNS": {"user_id": "user14", "scans_used": 0},
+    "ICDFN5WhsXyC": {"user_id": "user15", "scans_used": 0},
+    "r0sLqhMbwP8H": {"user_id": "user16", "scans_used": 0},
+    "lrVouqJvDFwf": {"user_id": "user17", "scans_used": 0},
+    "qFKQZaJjJIrT": {"user_id": "user18", "scans_used": 0},
+    "UhQquv8dg08R": {"user_id": "user19", "scans_used": 0},
+    "EAuKTV2pnIjf": {"user_id": "user20", "scans_used": 0},
+}
+
+_gateway_lock = threading.Lock()
+
+def require_auth(f):
+    """Decorator: blocks endpoint unless user has a valid session with scans remaining."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        password = session.get("password")
+        if not password or password not in GATEWAY_USERS:
+            return jsonify({"error": "Unauthorized. Please authenticate first via /api/auth"}), 401
+        with _gateway_lock:
+            user = GATEWAY_USERS[password]
+            if user["scans_used"] >= MAX_SCANS:
+                return jsonify({
+                    "error": f"Scan limit reached. Each user may only run {MAX_SCANS} scans.",
+                    "scans_used": user["scans_used"],
+                    "max_scans": MAX_SCANS,
+                }), 403
+        return f(*args, **kwargs)
+    return decorated
 
 scrape_status = {
     "running": False, "progress": [], "results": [],
@@ -461,12 +510,48 @@ def save_results():
 @app.route("/")
 def index():
     return render_template("index.html")
+@app.route("/api/auth", methods=["POST"])
+def auth():
+    """Validate password and create session."""
+    data = request.get_json(silent=True) or {}
+    password = data.get("password", "").strip()
+    if not password:
+        return jsonify({"error": "Password required"}), 400
+    with _gateway_lock:
+        if password not in GATEWAY_USERS:
+            return jsonify({"error": "Invalid password"}), 401
+        user = GATEWAY_USERS[password]
+        scans_left = MAX_SCANS - user["scans_used"]
+    session["password"] = password
+    return jsonify({
+        "status": "authenticated",
+        "user_id": user["user_id"],
+        "scans_used": user["scans_used"],
+        "scans_remaining": scans_left,
+        "max_scans": MAX_SCANS,
+    })
+
+@app.route("/api/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return jsonify({"status": "logged out"})
+
 @app.route("/api/start", methods=["POST"])
+@require_auth
 def start():
     if scrape_status["running"]: return jsonify({"error": "Already running"}), 400
+    # Increment scan count before starting
+    password = session["password"]
+    with _gateway_lock:
+        GATEWAY_USERS[password]["scans_used"] += 1
+        user = GATEWAY_USERS[password]
     cfg = request.get_json(silent=True) or {}
     threading.Thread(target=run_scrape, args=(cfg,), daemon=True).start()
-    return jsonify({"status": "started"})
+    return jsonify({
+        "status": "started",
+        "scans_used": user["scans_used"],
+        "scans_remaining": MAX_SCANS - user["scans_used"],
+    })
 
 @app.route("/api/stop", methods=["POST"])
 def stop():
